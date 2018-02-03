@@ -58,11 +58,11 @@ mkconfig () {
 		echo -n "Can your webplayer use dynamic urls? [Y/n] "
 		read -n 1 WEB_URL_DYN
 		case "$WEB_URL_DYN" in
-			"y"|"j")
-				WEB_URL_DYNAMIC=1
+			"n")
+				WEB_URL_DYNAMIC=0
 			;;
 			*)
-				WEB_URL_DYNAMIC=0
+				WEB_URL_DYNAMIC=1
 			;;
 		esac
 		echo
@@ -114,7 +114,6 @@ parse_params () {
 					echo "Error: If you use the -p option you need to install pwgen."
 					exit
 				}
-				shopt -s nocasematch
 				PRIVATE_CODE="$(pwgen -sByr ":/?#[]@$&'()*+,;=%\`<>\´^|\"{}" 16)"
 				STREAM_URL="${STREAM_URL}-${PRIVATE_CODE}"
 				echo -e "Your stream url is:\n\n	$STREAM_URL"
