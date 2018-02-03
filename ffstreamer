@@ -33,9 +33,11 @@
 usage () {
 	echo -e "Usage: $0 <VIDEO FILE> [OPTIONS]\n"
 	echo "Options:"
-	echo " -c width:height:x:y  Croppes the Video to specified values."
-	echo -e " -s timestamp         Timestamp where the Video starts. You can specify\n" \
+	echo "  -c width:height:x:y  Croppes the Video to specified values."
+	echo -e "  -s timestamp         Timestamp where the Video starts. You can specify\n" \
 		 "                     it in seconds or e.g. in hh:mm:ss."
+	echo "  -p                    Makes your stream more private by adding a random\n" \
+	echo -e "                  to the stream url."
 	exit
 }
 
@@ -47,11 +49,31 @@ mkconfig () {
 		read URL
 	done
 	
+	echo -n "If you have a webplayer you can specify the url, too (optional): "
+	read WEB_URL
+	
+	[ "$WEB_URL" ] && {
+		declare -l WEB_URL_DYN
+
+		echo -n "Can your webplayer use dynamic urls? [Y/n] "
+		read -n 1 WEB_URL_DYN
+		case "$WEB_URL_DYN" in
+			"y"|"j")
+				WEB_URL_DYNAMIC=1
+			;;
+			*)
+				WEB_URL_DYNAMIC=0
+			;;
+		esac
+	}
+	
 	cat > "$CONFIG" << EOF
 PRESET="fast"
 VRATE="1600k"
 ARATE="128k"
-STREAMURL="$URL"
+STREAM_URL="$URL"
+WEBPLAYER_URL="$WEB_URL"
+WEBPLAYER_URL_DYNAMIC="$WEB_URL_DYNAMIC"
 EOF
 	
 	declare -l DO_EDIT
@@ -76,7 +98,7 @@ EOF
 
 parse_params () {
 	OPTIND=2
-	while getopts "c:s:" optkey; do
+	while getopts "c:s:p" optkey; do
 		case "$optkey" in
 			"c")
 				CROP="-filter:v crop=$OPTARG"
@@ -89,6 +111,20 @@ parse_params () {
 			"s")
 				STARTTIME="-ss $OPTARG"
 				echo "Stream starts at position $OPTARG."
+				;;
+			"p")
+				which pwgen >/dev/null 2>&1 || {
+					echo "Error: If you use the -p option you need to install pwgen."
+					exit
+				}
+				shopt -s nocasematch
+				PRIVATE_CODE="$(pwgen -sByr ":/?#[]@$&'()*+,;=%\`<>\´^|\"{}" 16)"
+				STREAM_URL="${STREAM_URL}-${PRIVATE_CODE}"
+				echo -e "Your stream url is:\n\n	$STREAM_URL"
+				[ "$WEBPLAYER_URL_DYNAMIC" ] && echo "	Webplayer: ${WEBPLAYER_URL}-${PRIVATE_CODE}"
+				echo -e "\n\nCopy this link and share it before you proceed."
+				echo -n "Press [Enter] when you're ready to start the stream."
+				read
 				;;
 			*)
 				usage
@@ -107,9 +143,9 @@ VIDEO_FILE="$1"
 	usage
 }
 
-parse_params "$@"
-
 . $CONFIG
 
-ffmpeg -re $STARTTIME -i "$VIDEO_FILE" -map 0:v -map 0:a:0 -c:v libx264 -preset "$PRESET" -r 25 -s hd720 -b:v "$VRATE" -bufsize "$VRATE" $CROP -c:a aac -b:a "$ARATE" -ac 2 -strict -2 -f flv "$STREAMURL"
+parse_params "$@"
+
+ffmpeg -re $STARTTIME -i "$VIDEO_FILE" -map 0:v -map 0:a:0 -c:v libx264 -preset "$PRESET" -r 25 -s hd720 -b:v "$VRATE" -bufsize "$VRATE" $CROP -c:a aac -b:a "$ARATE" -ac 2 -strict -2 -f flv "$STREAM_URL"
 
