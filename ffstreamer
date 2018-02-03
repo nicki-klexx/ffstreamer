@@ -42,6 +42,15 @@ usage () {
 }
 
 mkconfig () {
+	[ -d "$HOME/.config" ] || mkdir "$HOME/.config"
+	
+	EDITORS=( nano joe vim vi emacs )
+	i=0
+	while [[ ! "$EDITOR" && "${EDITORS[$i]}" ]]; do
+		EDITOR="$(which ${EDITORS[$i]} 2>/dev/null)"
+		let "i++"
+	done
+	
 	echo "No config file existing. Creating an new one."
 	
 	while [ "$URL" == "" ]; do
@@ -78,20 +87,24 @@ WEBPLAYER_URL_DYNAMIC="$WEB_URL_DYNAMIC"
 EOF
 	
 	declare -l DO_EDIT
-
-	echo -n "Do you want to edit the config? [y/N] "
-	read -n 1 DO_EDIT
-	case "$DO_EDIT" in
-		"y"|"j")
-			$EDITOR "$CONFIG"
-			echo -e "\n"
-		;;
-		*)
-			echo -e "\nYour config is set to:"
-			cat "$CONFIG"
-			echo
-		;;
-	esac
+	
+	if [ "$EDITOR" ]; then
+		echo -n "Do you want to edit the config? [y/N] "
+		read -n 1 DO_EDIT
+		case "$DO_EDIT" in
+			"y"|"j")
+				$EDITOR "$CONFIG"
+				echo -e "\n"
+			;;
+			*)
+				echo -e "\nYour config is set to:"
+				cat "$CONFIG"
+				echo
+			;;
+		esac
+	else
+		echo "No editor found for editing the config file right now."
+	fi
 	
 	echo -e "Your config ist saved to $CONFIG. If you want to change something you can edit this file.\n"
 }
@@ -114,7 +127,7 @@ parse_params () {
 					echo "Error: If you use the -p option you need to install pwgen."
 					exit
 				}
-				PRIVATE_CODE="$(pwgen -sByr ":/?#[]@$&'()*+,;=%\`<>\´^|\"{}" 16)"
+				PRIVATE_CODE="$(pwgen -sByr ":/?#[]@$&'()*+,;=%\`<>\´^|\"{}" 16 2>/dev/null || pwgen -sB 16)"
 				STREAM_URL="${STREAM_URL}-${PRIVATE_CODE}"
 				echo -e "Your stream url is:\n\n	$STREAM_URL"
 				[ "$WEBPLAYER_URL_DYNAMIC" ] && echo "	Webplayer: ${WEBPLAYER_URL}-${PRIVATE_CODE}"
