@@ -1,0 +1,115 @@
+#!/bin/bash
+
+#~ Copyright (c) 2017-2018 Robin Groppe, Nicki K-leXx
+
+#~ This program is free software: you can redistribute it and/or modify
+#~ it under the terms of the GNU General Public License as published by
+#~ the Free Software Foundation, either version 3 of the License, or
+#~ (at your option) any later version.
+
+#~ This program is distributed in the hope that it will be useful,
+#~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+#~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#~ GNU General Public License for more details.
+
+#~ You should have received a copy of the GNU General Public License
+#~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#~ Dieses Programm ist Freie Software: Sie können es unter den Bedingungen
+#~ der GNU General Public License, wie von der Free Software Foundation,
+#~ Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
+#~ veröffentlichten Version, weiterverbreiten und/oder modifizieren.
+
+#~ Dieses Programm wird in der Hoffnung, dass es nützlich sein wird, aber
+#~ OHNE JEDE GEWÄHRLEISTUNG, bereitgestellt; sogar ohne die implizite
+#~ Gewährleistung der MARKTFÄHIGKEIT oder EIGNUNG FÜR EINEN BESTIMMTEN ZWECK.
+#~ Siehe die GNU General Public License für weitere Details.
+
+#~ Sie sollten eine Kopie der GNU General Public License zusammen mit diesem
+#~ Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>.
+
+
+
+usage () {
+	echo -e "Usage: $0 <VIDEO FILE> [OPTIONS]\n"
+	echo "Options:"
+	echo " -c width:height:x:y  Croppes the Video to specified values."
+	echo -e " -s timestamp         Timestamp where the Video starts. You can specify\n" \
+		 "                     it in seconds or e.g. in hh:mm:ss."
+	exit
+}
+
+mkconfig () {
+	echo "No config file existing. Creating an new one."
+	
+	while [ "$URL" == "" ]; do
+		echo -n "Please specify the url you want to stream to: "
+		read URL
+	done
+	
+	cat > "$CONFIG" << EOF
+PRESET="fast"
+VRATE="1600k"
+ARATE="128k"
+STREAMURL="$URL"
+EOF
+	
+	declare -l DO_EDIT
+
+	echo -n "Do you want to edit the config? [y/N] "
+	read -n 1 DO_EDIT
+	case "$DO_EDIT" in
+		"y"|"j")
+			$EDITOR "$CONFIG"
+			echo -e "\n"
+		;;
+		*)
+			echo -e "\nYour config is set to:"
+			cat "$CONFIG"
+			echo
+		;;
+	esac
+	
+	echo -e "Your config ist saved to $CONFIG. If you want to change something you can edit this file.\n"
+}
+
+
+parse_params () {
+	OPTIND=2
+	while getopts "c:s:" optkey; do
+		case "$optkey" in
+			"c")
+				CROP="-filter:v crop=$OPTARG"
+				echo "Video is cropped to:"
+				echo "	Width: $(cut -d: -f1 <<<$OPTARG)"
+				echo "	Height: $(cut -d: -f2 <<<$OPTARG)"
+				echo "	Position X: $(cut -d: -f3 <<<$OPTARG)"
+				echo "	Position Y: $(cut -d: -f4 <<<$OPTARG)"
+				;;
+			"s")
+				STARTTIME="-ss $OPTARG"
+				echo "Stream starts at position $OPTARG."
+				;;
+			*)
+				usage
+				;;
+		esac
+	done
+}
+
+CONFIG="$HOME/.config/ffstreamer"
+VIDEO_FILE="$1"
+
+[ -e "$CONFIG" ] || mkconfig
+
+[ -e "$VIDEO_FILE" ] || (
+	echo -e "Error: File \"$1\" not found.\n"	
+	usage
+)
+
+parse_params "$@"
+
+. $CONFIG
+
+ffmpeg -re $STARTTIME -i "$VIDEO_FILE" -map 0:v -map 0:a:0 -c:v libx264 -preset "$PRESET" -r 25 -s hd720 -b:v "$VRATE" -bufsize "$VRATE" $CROP -c:a aac -b:a "$ARATE" -ac 2 -strict -2 -f flv "$STREAMURL"
+
