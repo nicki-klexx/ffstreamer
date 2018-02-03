@@ -33,10 +33,10 @@
 usage () {
 	echo -e "Usage: $0 <VIDEO FILE> [OPTIONS]\n"
 	echo "Options:"
-	echo "  -c width:height:x:y  Crops the Video to specified values."
+	echo "  -c width:height:x:y  Crops the video to specified values."
 	echo -e "  -p                   Makes your stream more private by adding a random\n" \
          "                      string to the stream url."
-	echo -e "  -s timestamp         Timestamp where the Video starts. You can specify\n" \
+	echo -e "  -s timestamp         Timestamp where the video starts. You can specify\n" \
          "                      it in seconds or e.g. in hh:mm:ss."
 	exit
 }
