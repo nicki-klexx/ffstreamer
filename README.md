@@ -8,7 +8,7 @@ ffstreamer <VIDEO FILE> [OPTIONS]
 ````
 ````
 Options:
-	-c width:height:x:y  Croppes the Video to specified values.
+	-c width:height:x:y  Crops the Video to specified values.
 	-p                   Makes your stream more private by adding a random
 	                     string to the stream url.
 	-s timestamp         Timestamp where the Video starts. You can specify
