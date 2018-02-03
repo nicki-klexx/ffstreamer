@@ -102,10 +102,10 @@ VIDEO_FILE="$1"
 
 [ -e "$CONFIG" ] || mkconfig
 
-[ -e "$VIDEO_FILE" ] || (
+[ -e "$VIDEO_FILE" ] || {
 	echo -e "Error: File \"$1\" not found.\n"	
 	usage
-)
+}
 
 parse_params "$@"
 
