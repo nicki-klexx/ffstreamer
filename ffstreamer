@@ -38,6 +38,8 @@ usage () {
          "                      string to the stream url."
 	echo -e "  -s timestamp         Timestamp where the video starts. You can specify\n" \
          "                      it in seconds or e.g. in hh:mm:ss."
+    echo -e "  -a number            Number of the audio stream if you want to chose\n" \
+		 "                      between have more than one."
 	exit
 }
 
@@ -112,7 +114,7 @@ EOF
 
 parse_params () {
 	OPTIND=2
-	while getopts "c:s:p" OPTKEY; do
+	while getopts "c:s:a:p" OPTKEY; do
 		case "$OPTKEY" in
 			"c")
 				CROP="-filter:v crop=$OPTARG"
@@ -139,6 +141,10 @@ parse_params () {
 				STARTTIME="-ss $OPTARG"
 				echo "Stream starts at position $OPTARG."
 				;;
+			"a")
+				AUDIO_STREAM="$OPTARG"
+				echo "Using audio stream #0:$[$OPTARG+1]."
+				;;
 			*)
 				usage
 				;;
@@ -158,7 +164,9 @@ VIDEO_FILE="$1"
 
 . $CONFIG
 
+AUDIO_STREAM="0"
+
 parse_params "$@"
 
-ffmpeg -re $STARTTIME -i "$VIDEO_FILE" -map 0:v -map 0:a:0 -c:v libx264 -preset "$PRESET" -r 25 -s hd720 -b:v "$VRATE" -bufsize "$VRATE" $CROP -c:a aac -b:a "$ARATE" -ac 2 -strict -2 -f flv "$STREAM_URL"
+ffmpeg -re $STARTTIME -i "$VIDEO_FILE" -map 0:v -map 0:a:$AUDIO_STREAM -c:v libx264 -preset "$PRESET" -r 25 -s hd720 -b:v "$VRATE" -bufsize "$VRATE" $CROP -c:a aac -b:a "$ARATE" -ac 2 -strict -2 -f flv "$STREAM_URL"
 
